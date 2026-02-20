@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 import sadiLogo from "@/assets/sadi-logo.png";
 
 const ForgotPassword = () => {
@@ -14,18 +15,40 @@ const ForgotPassword = () => {
   const [sent, setSent] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email) {
       toast({ title: "Error", description: "Please enter your email", variant: "destructive" });
       return;
     }
+
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const response = await apiRequest("/api/users/forgot_password", {
+        method: "POST",
+        autoLogoutOn401: false,
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Something went wrong");
+      }
+
       setSent(true);
       toast({ title: "Email sent", description: "Check your inbox for reset instructions" });
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

@@ -4,9 +4,27 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Plus, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import sadiLogo from "@/assets/sadi-logo.png";
+import { apiRequest, clearSession } from "@/lib/api";
 import { getTasks, createTask, updateTask, deleteTask, type Task } from "@/lib/tasks";
 import TaskDialog from "@/components/TaskDialog";
 import TaskCard from "@/components/TaskCard";
+
+type StoredUser = {
+  name?: string;
+  email?: string;
+};
+
+const parseStoredUser = (rawUser: string | null): StoredUser | null => {
+  if (!rawUser || rawUser === "undefined" || rawUser === "null") {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawUser) as StoredUser;
+  } catch {
+    return null;
+  }
+};
 
 const Dashboard = () => {
   const [userName, setUserName] = useState("");
@@ -18,15 +36,22 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const user = localStorage.getItem("sadi_current_user");
-    if (!user) {
+    const rawGoalstackUser = localStorage.getItem("goalstack_user");
+    const rawLegacyUser = localStorage.getItem("sadi_current_user");
+    const parsed = parseStoredUser(rawGoalstackUser) || parseStoredUser(rawLegacyUser);
+
+    if (!parsed?.email) {
+      clearSession();
       navigate("/");
       return;
     }
-    const parsed = JSON.parse(user);
-    setUserName(parsed.name);
-    setUserEmail(parsed.email);
-    setTasks(getTasks(parsed.email));
+
+    const email = parsed.email;
+    const name = parsed.name || parsed.email || "User";
+
+    setUserName(name);
+    setUserEmail(email);
+    setTasks(getTasks(email));
   }, [navigate]);
 
   const refresh = useCallback(() => {
@@ -63,9 +88,19 @@ const Dashboard = () => {
     setDialogOpen(true);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("sadi_current_user");
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await apiRequest("/api/users/logout", {
+        method: "POST",
+        autoLogoutOn401: false,
+      });
+    } catch {
+      console.error("Backend logout failed, clearing local data anyway.");
+    } finally {
+      clearSession();
+      navigate("/");
+      toast({ title: "Logged out" });
+    }
   };
 
   return (
@@ -87,9 +122,7 @@ const Dashboard = () => {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">
-            Welcome to Sadi IT Solutions
-          </h1>
+          <h1 className="text-3xl font-bold text-foreground">Welcome to Sadi IT Solutions</h1>
           <p className="text-muted-foreground mt-1">
             Hello, <span className="text-primary font-semibold">{userName}</span>!
           </p>
@@ -120,7 +153,10 @@ const Dashboard = () => {
 
       <TaskDialog
         open={dialogOpen}
-        onClose={() => { setDialogOpen(false); setEditingTask(null); }}
+        onClose={() => {
+          setDialogOpen(false);
+          setEditingTask(null);
+        }}
         onSave={editingTask ? handleUpdate : handleCreate}
         task={editingTask}
       />

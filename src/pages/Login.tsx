@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 import sadiLogo from "@/assets/sadi-logo.png";
+
+type LoginResponse = {
+  token?: string;
+  user?: {
+    name?: string;
+    email?: string;
+  };
+  message?: string;
+};
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -16,25 +26,61 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("message") === "session_expired") {
+      toast({ title: "Session expired", description: "Please login again.", variant: "destructive" });
+      navigate("/", { replace: true });
+    }
+  }, [navigate, toast]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email || !password) {
       toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
       return;
     }
+
     setLoading(true);
-    // Simulate login — store name from signup or fallback
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem("sadi_users") || "[]");
-      const user = users.find((u: any) => u.email === email && u.password === password);
-      if (user) {
-        localStorage.setItem("sadi_current_user", JSON.stringify(user));
-        navigate("/dashboard");
-      } else {
-        toast({ title: "Login failed", description: "Invalid email or password", variant: "destructive" });
+
+    try {
+      const response = await apiRequest("/api/users/login", {
+        method: "POST",
+        autoLogoutOn401: false,
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data: LoginResponse = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
       }
+
+      const normalizedUser = {
+        name: data.user?.name || email,
+        email: data.user?.email || email,
+      };
+
+      if (data.token) {
+        localStorage.setItem("goalstack_token", data.token);
+      } else {
+        localStorage.removeItem("goalstack_token");
+      }
+
+      localStorage.setItem("goalstack_user", JSON.stringify(normalizedUser));
+
+      toast({ title: "Welcome back!", description: "Login successful" });
+      navigate("/dashboard");
+    } catch (error: unknown) {
+      toast({
+        title: "Login Error",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -70,7 +116,7 @@ const Login = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="********"
                   className="pl-10 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -109,3 +155,4 @@ const Login = () => {
 };
 
 export default Login;
+

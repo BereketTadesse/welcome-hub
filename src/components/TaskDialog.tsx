@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,17 +28,19 @@ const TaskDialog = ({ open, onClose, onSave, task }: TaskDialogProps) => {
     setFileData("");
   };
 
-  // Sync state when task changes
-  useState(() => {
+  useEffect(() => {
     if (task) {
       setTitle(task.title);
       setDescription(task.description);
       setFileName(task.fileName || "");
       setFileData(task.fileData || "");
-    } else {
+      return;
+    }
+
+    if (open) {
       resetForm();
     }
-  });
+  }, [task, open]);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

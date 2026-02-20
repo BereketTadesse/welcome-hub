@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/api";
 import sadiLogo from "@/assets/sadi-logo.png";
 
 const Signup = () => {
@@ -17,30 +18,45 @@ const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!name || !email || !password) {
       toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" });
       return;
     }
+
     if (password.length < 6) {
       toast({ title: "Error", description: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
+
     setLoading(true);
-    setTimeout(() => {
-      const users = JSON.parse(localStorage.getItem("sadi_users") || "[]");
-      if (users.find((u: any) => u.email === email)) {
-        toast({ title: "Error", description: "Email already registered", variant: "destructive" });
-        setLoading(false);
-        return;
+
+    try {
+      const response = await apiRequest("/api/users/create", {
+        method: "POST",
+        autoLogoutOn401: false,
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
       }
-      users.push({ name, email, password });
-      localStorage.setItem("sadi_users", JSON.stringify(users));
-      toast({ title: "Account created!", description: "You can now sign in" });
+
+      toast({ title: "Account created!", description: "Check your email for verification." });
       navigate("/");
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -91,7 +107,7 @@ const Signup = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="********"
                   className="pl-10 pr-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -124,3 +140,4 @@ const Signup = () => {
 };
 
 export default Signup;
+

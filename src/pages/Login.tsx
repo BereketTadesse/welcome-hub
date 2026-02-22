@@ -30,6 +30,7 @@ type LoginResponse = {
 };
 
 const isJwtLike = (value: string) => /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(value);
+const isEmailLike = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
 const findJwtInObject = (input: unknown): string | undefined => {
   if (!input) return undefined;
@@ -85,8 +86,10 @@ const Login = () => {
         body: JSON.stringify({ email, password }),
       })) as LoginResponse;
 
+      const nameFromApi = data.user?.name || data.data?.user?.name;
+      const safeName = nameFromApi && !isEmailLike(nameFromApi) ? nameFromApi : "User";
       const normalizedUser = {
-        name: data.user?.name || data.data?.user?.name || email,
+        name: safeName,
         email: data.user?.email || data.data?.user?.email || email,
       };
 

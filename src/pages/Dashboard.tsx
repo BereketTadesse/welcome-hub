@@ -16,6 +16,8 @@ type StoredUser = {
   email?: string;
 };
 
+const isEmailLike = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
 const parseStoredUser = (rawUser: string | null): StoredUser | null => {
   if (!rawUser || rawUser === "undefined" || rawUser === "null") {
     return null;
@@ -64,7 +66,8 @@ const Dashboard = () => {
     }
 
     const email = parsed.email;
-    const name = parsed.name || parsed.email || "User";
+    const rawName = parsed.name?.trim();
+    const name = rawName && !isEmailLike(rawName) ? rawName : "User";
 
     setUserName(name);
     setUserEmail(email);

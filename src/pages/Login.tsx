@@ -13,10 +13,12 @@ type LoginResponse = {
   token?: string;
   jwt?: string;
   accessToken?: string;
+  name?: string;
   data?: {
     token?: string;
     jwt?: string;
     accessToken?: string;
+    name?: string;
     user?: {
       name?: string;
       email?: string;
@@ -86,7 +88,7 @@ const Login = () => {
         body: JSON.stringify({ email, password }),
       })) as LoginResponse;
 
-      const nameFromApi = data.user?.name || data.data?.user?.name;
+      const nameFromApi = data.name || data.data?.name || data.user?.name || data.data?.user?.name;
       const safeName = nameFromApi && !isEmailLike(nameFromApi) ? nameFromApi : "User";
       const normalizedUser = {
         name: safeName,

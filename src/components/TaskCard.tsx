@@ -45,7 +45,7 @@ const TaskCard = ({ task, onEdit, onDelete }: TaskCardProps) => {
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(task)}>
               <Pencil className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(task.id)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(task.id || (task as any)._id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>

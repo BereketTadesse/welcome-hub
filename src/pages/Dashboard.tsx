@@ -76,24 +76,54 @@ const Dashboard = () => {
     void fetchTasks(userEmail);
   }, [fetchTasks, userEmail]);
 
-  const handleCreate = (data: { title: string; description: string; fileName?: string; fileData?: string }) => {
-    createTask(userEmail, data);
-    refresh();
-    toast({ title: "Task created" });
+  const handleCreate = async (data: { title: string; description: string; fileName?: string; fileData?: string }) => {
+    try {
+      await apiRequest("/api/tasks/create", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      toast({ title: "Task created" });
+    } catch (error) {
+      console.error("API create failed, saving to local storage", error);
+      createTask(userEmail, data);
+      toast({ title: "Task created locally" });
+    } finally {
+      refresh();
+    }
   };
 
-  const handleUpdate = (data: { title: string; description: string; fileName?: string; fileData?: string }) => {
+  const handleUpdate = async (data: { title: string; description: string; fileName?: string; fileData?: string }) => {
     if (!editingTask) return;
-    updateTask(userEmail, editingTask.id, data);
-    setEditingTask(null);
-    refresh();
-    toast({ title: "Task updated" });
+    const taskId = editingTask.id || (editingTask as any)._id;
+    try {
+      await apiRequest(`/api/tasks/update/${taskId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      toast({ title: "Task updated" });
+    } catch (error) {
+      console.error("API update failed, updating locally", error);
+      updateTask(userEmail, editingTask.id, data);
+      toast({ title: "Task updated locally" });
+    } finally {
+      setEditingTask(null);
+      refresh();
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteTask(userEmail, id);
-    refresh();
-    toast({ title: "Task deleted", variant: "destructive" });
+  const handleDelete = async (id: string) => {
+    try {
+      await apiRequest(`/api/tasks/delete/${id}`, {
+        method: "DELETE",
+      });
+      toast({ title: "Task deleted", variant: "destructive" });
+    } catch (error) {
+      console.error("API delete failed, deleting locally", error);
+      deleteTask(userEmail, id);
+      toast({ title: "Task deleted locally", variant: "destructive" });
+    } finally {
+      refresh();
+    }
   };
 
   const openEdit = (task: Task) => {
@@ -163,7 +193,7 @@ const Dashboard = () => {
         ) : (
           <div className="grid gap-4">
             {tasks.map((task) => (
-              <TaskCard key={task.id} task={task} onEdit={openEdit} onDelete={handleDelete} />
+              <TaskCard key={task.id || (task as any)._id} task={task} onEdit={openEdit} onDelete={handleDelete} />
             ))}
           </div>
         )}

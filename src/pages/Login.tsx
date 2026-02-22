@@ -11,11 +11,45 @@ import sadiLogo from "@/assets/sadi-logo.png";
 
 type LoginResponse = {
   token?: string;
+  jwt?: string;
+  accessToken?: string;
+  data?: {
+    token?: string;
+    jwt?: string;
+    accessToken?: string;
+    user?: {
+      name?: string;
+      email?: string;
+    };
+  };
   user?: {
     name?: string;
     email?: string;
   };
   message?: string;
+};
+
+const isJwtLike = (value: string) => /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(value);
+
+const findJwtInObject = (input: unknown): string | undefined => {
+  if (!input) return undefined;
+  if (typeof input === "string") {
+    return isJwtLike(input) ? input : undefined;
+  }
+  if (Array.isArray(input)) {
+    for (const item of input) {
+      const found = findJwtInObject(item);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  if (typeof input === "object") {
+    for (const value of Object.values(input as Record<string, unknown>)) {
+      const found = findJwtInObject(value);
+      if (found) return found;
+    }
+  }
+  return undefined;
 };
 
 const Login = () => {
@@ -45,27 +79,33 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await apiRequest("/api/users/login", {
+      const data = (await apiRequest("/api/users/login", {
         method: "POST",
         autoLogoutOn401: false,
         body: JSON.stringify({ email, password }),
-      });
-
-      const data: LoginResponse = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
+      })) as LoginResponse;
 
       const normalizedUser = {
-        name: data.user?.name || email,
-        email: data.user?.email || email,
+        name: data.user?.name || data.data?.user?.name || email,
+        email: data.user?.email || data.data?.user?.email || email,
       };
 
-      if (data.token) {
-        localStorage.setItem("goalstack_token", data.token);
+      const token =
+        data.token ||
+        data.jwt ||
+        data.accessToken ||
+        data.data?.token ||
+        data.data?.jwt ||
+        data.data?.accessToken ||
+        findJwtInObject(data);
+
+      if (token) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("goalstack_token", token);
       } else {
+        localStorage.removeItem("token");
         localStorage.removeItem("goalstack_token");
+        console.warn("Login succeeded but no JWT token was found in response body.");
       }
 
       localStorage.setItem("goalstack_user", JSON.stringify(normalizedUser));

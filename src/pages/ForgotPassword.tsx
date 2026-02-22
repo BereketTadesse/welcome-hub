@@ -26,17 +26,11 @@ const ForgotPassword = () => {
     setLoading(true);
 
     try {
-      const response = await apiRequest("/api/users/forgot_password", {
+      await apiRequest("/api/users/forgot_password", {
         method: "POST",
         autoLogoutOn401: false,
         body: JSON.stringify({ email }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
-      }
 
       setSent(true);
       toast({ title: "Email sent", description: "Check your inbox for reset instructions" });

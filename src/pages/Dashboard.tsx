@@ -9,6 +9,8 @@ import { getTasks, createTask, updateTask, deleteTask, type Task } from "@/lib/t
 import TaskDialog from "@/components/TaskDialog";
 import TaskCard from "@/components/TaskCard";
 
+const GET_TASKS_URL = "/api/tasks/gettasks";
+
 type StoredUser = {
   name?: string;
   email?: string;
@@ -35,6 +37,21 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const fetchTasks = useCallback(async (email: string) => {
+    try {
+      const data = await apiRequest(GET_TASKS_URL, {
+        method: "GET",
+        autoLogoutOn401: false,
+      });
+
+      const taskList = Array.isArray(data) ? data : Array.isArray(data?.tasks) ? data.tasks : [];
+      setTasks(taskList);
+    } catch (error) {
+      console.error("Failed to load tasks from API. Falling back to local storage.", error);
+      setTasks(getTasks(email));
+    }
+  }, []);
+
   useEffect(() => {
     const rawGoalstackUser = localStorage.getItem("goalstack_user");
     const rawLegacyUser = localStorage.getItem("sadi_current_user");
@@ -51,12 +68,13 @@ const Dashboard = () => {
 
     setUserName(name);
     setUserEmail(email);
-    setTasks(getTasks(email));
-  }, [navigate]);
+    void fetchTasks(email);
+  }, [fetchTasks, navigate]);
 
   const refresh = useCallback(() => {
-    setTasks(getTasks(userEmail));
-  }, [userEmail]);
+    if (!userEmail) return;
+    void fetchTasks(userEmail);
+  }, [fetchTasks, userEmail]);
 
   const handleCreate = (data: { title: string; description: string; fileName?: string; fileData?: string }) => {
     createTask(userEmail, data);

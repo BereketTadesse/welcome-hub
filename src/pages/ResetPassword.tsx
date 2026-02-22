@@ -45,17 +45,11 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      const response = await apiRequest(`/api/users/reset_password/${token}`, {
+      await apiRequest(`/api/users/reset_password/${token}`, {
         method: "PUT",
         autoLogoutOn401: false,
         body: JSON.stringify({ newPassword, confirmPassword }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to reset password");
-      }
 
       toast({ title: "Password updated", description: "You can now sign in with your new password." });
       navigate("/");

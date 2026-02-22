@@ -34,17 +34,11 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const response = await apiRequest("/api/users/create", {
+      await apiRequest("/api/users/create", {
         method: "POST",
         autoLogoutOn401: false,
         body: JSON.stringify({ name, email, password }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
-      }
 
       toast({ title: "Account created!", description: "Check your email for verification." });
       navigate("/");

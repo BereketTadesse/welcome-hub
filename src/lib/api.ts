@@ -1,5 +1,6 @@
 export type ApiRequestOptions = RequestInit & {
   autoLogoutOn401?: boolean;
+  includeAuthHeader?: boolean;
 };
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
@@ -14,6 +15,7 @@ const resolveUrl = (url: string) => {
 
 export const clearSession = () => {
   localStorage.removeItem("goalstack_user");
+  localStorage.removeItem("token");
   localStorage.removeItem("goalstack_token");
   localStorage.removeItem("sadi_current_user");
 };
@@ -24,8 +26,8 @@ const redirectToLogin = () => {
 };
 
 export const apiRequest = async (url: string, options: ApiRequestOptions = {}) => {
-  const { autoLogoutOn401 = true, headers, body, ...rest } = options;
-  const token = localStorage.getItem("goalstack_token");
+  const { autoLogoutOn401 = true, includeAuthHeader = true, headers, body, ...rest } = options;
+  const token = localStorage.getItem("token") || localStorage.getItem("goalstack_token");
 
   const requestHeaders = new Headers(headers || {});
 
@@ -33,7 +35,7 @@ export const apiRequest = async (url: string, options: ApiRequestOptions = {}) =
     requestHeaders.set("Content-Type", "application/json");
   }
 
-  if (token && !requestHeaders.has("Authorization")) {
+  if (includeAuthHeader && token && !requestHeaders.has("Authorization")) {
     requestHeaders.set("Authorization", `Bearer ${token}`);
   }
 
@@ -44,9 +46,20 @@ export const apiRequest = async (url: string, options: ApiRequestOptions = {}) =
   });
 
   if (response.status === 401 && autoLogoutOn401) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("goalstack_token");
     redirectToLogin();
     throw new Error("Session expired");
   }
 
-  return response;
+  const contentType = response.headers.get("content-type") || "";
+  const data = contentType.includes("application/json") ? await response.json() : await response.text();
+
+  if (!response.ok) {
+    const message =
+      typeof data === "string" ? data : (data as { message?: string })?.message || `Request failed (${response.status})`;
+    throw new Error(message);
+  }
+
+  return data;
 };

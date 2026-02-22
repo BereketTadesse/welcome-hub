@@ -96,8 +96,8 @@ const Dashboard = () => {
     if (!editingTask) return;
     const taskId = editingTask.id || (editingTask as any)._id;
     try {
-      await apiRequest(`/api/tasks/update/${taskId}`, {
-        method: "PUT",
+      await apiRequest(`/api/tasks/updatetasks/${taskId}`, {
+        method: "PATCH",
         body: JSON.stringify(data),
       });
       toast({ title: "Task updated" });
@@ -113,7 +113,7 @@ const Dashboard = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await apiRequest(`/api/tasks/delete/${id}`, {
+      await apiRequest(`/api/tasks/deletetasks/${id}`, {
         method: "DELETE",
       });
       toast({ title: "Task deleted", variant: "destructive" });
